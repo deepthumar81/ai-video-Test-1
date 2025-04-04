@@ -1,16 +1,21 @@
-from openai import OpenAI
+# from openai import OpenAI
 import os
 import json
 import re
 from datetime import datetime
 from utility.utils import log_response,LOG_TYPE_GPT
 
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-client = OpenAI(
-    api_key=OPENROUTER_API_KEY,
-    api_base="https://api.openrouter.ai/v1"
-)
+# OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+# client = OpenAI(
+#     api_key=OPENROUTER_API_KEY,
+#     api_base="https://api.openrouter.ai/v1"
+# )
+
+import openai
+openai.api_key = os.getenv('OPENROUTER_API_KEY')
+openai.api_base = "https://api.openrouter.ai/v1"
 model = "mistralai/mistral-small-3.1-24b-instruct:free"  # Example model from OpenRouter
+
 
 log_directory = ".logs/gpt_logs"
 
