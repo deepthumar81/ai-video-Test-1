@@ -1,29 +1,15 @@
-from openai import OpenAI
 import os
 import json
 import re
 from datetime import datetime
-from utility.utils import log_response,LOG_TYPE_GPT
+from openai import OpenAI
+from utility.utils import log_response, LOG_TYPE_GPT
 
-if os.environ.get("GROQ_API_KEY") and len(os.environ.get("GROQ_API_KEY")) > 30:
-    from groq import Groq
-    model = "mixtral-8x7b-32768"
-    client = Groq(
-        api_key=os.environ.get("GROQ_API_KEY"),
-    )
-else:
-    from openai import OpenAI
-    OPENAI_API_KEY = os.getenv('OPENAI_KEY')
-    
-    if OPENAI_API_KEY:  # If an OpenAI key is provided, use it
-        model = "gpt-4o"
-        client = OpenAI(api_key=OPENAI_API_KEY)
-    else:  # Otherwise, fall back to OpenRouter
-        model = "gpt-4o"  # You can change this if needed
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY")
-        )
+# Initialize OpenRouter API
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+)
 
 log_directory = ".logs/gpt_logs"
 
@@ -35,35 +21,33 @@ For example, if the caption is 'The cheetah is the fastest land animal, capable 
 
 Important Guidelines:
 
-Use only English in your text queries.
-Each search string must depict something visual.
-The depictions have to be extremely visually concrete, like rainy street, or cat sleeping.
-'emotional moment' <= BAD, because it doesn't depict something visually.
-'crying child' <= GOOD, because it depicts something visual.
-The list must always contain the most relevant and appropriate query searches.
-['Car', 'Car driving', 'Car racing', 'Car parked'] <= BAD, because it's 4 strings.
-['Fast car'] <= GOOD, because it's 1 string.
-['Un chien', 'une voiture rapide', 'une maison rouge'] <= BAD, because the text query is NOT in English.
+- Use only English in your text queries.
+- Each search string must depict something visual.
+- The depictions have to be extremely visually concrete, like 'rainy street' or 'cat sleeping'.
+- 'emotional moment' ❌ BAD (not visually concrete).
+- 'crying child' ✅ GOOD (visually concrete).
+- The list must always contain the most relevant and appropriate query searches.
+- ['Car', 'Car driving', 'Car racing', 'Car parked'] ❌ BAD (too many strings).
+- ['Fast car'] ✅ GOOD (concise, relevant).
+- ['Un chien', 'une voiture rapide', 'une maison rouge'] ❌ BAD (must be in English).
 
 Note: Your response should be the response only and no extra text or data.
-  """
+"""
 
 def fix_json(json_str):
-    # Replace typographical apostrophes with straight quotes
-    json_str = json_str.replace("’", "'")
-    # Replace any incorrect quotes (e.g., mixed single and double quotes)
-    json_str = json_str.replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
-    # Add escaping for quotes within the strings
-    json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
+    """ Fix common JSON formatting issues. """
+    json_str = json_str.replace("’", "'")  # Replace typographical apostrophes
+    json_str = json_str.replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")  # Fix quotes
+    json_str = json_str.replace('"you didn"t"', '"you didn\'t"')  # Fix escaping
     return json_str
 
-def getVideoSearchQueriesTimed(script,captions_timed):
+def getVideoSearchQueriesTimed(script, captions_timed):
+    """ Extracts visual search queries from video captions. """
     end = captions_timed[-1][0][1]
     try:
-        
-        out = [[[0,0],""]]
+        out = [[[0, 0], ""]]
         while out[-1][0][1] != end:
-            content = call_OpenAI(script,captions_timed).replace("'",'"')
+            content = call_OpenAI(script, captions_timed).replace("'", '"')
             try:
                 out = json.loads(content)
             except Exception as e:
@@ -73,18 +57,22 @@ def getVideoSearchQueriesTimed(script,captions_timed):
                 out = json.loads(content)
         return out
     except Exception as e:
-        print("error in response",e)
+        print("error in response", e)
    
     return None
 
-def call_OpenAI(script,captions_timed):
-    user_content = """Script: {}
-Timed Captions:{}
-""".format(script,"".join(map(str,captions_timed)))
+def call_OpenAI(script, captions_timed):
+    """ Calls OpenRouter API to generate search queries. """
+    user_content = f"Script: {script}\nTimed Captions: {''.join(map(str, captions_timed))}"
     print("Content", user_content)
-    
+
     response = client.chat.completions.create(
-        model= model,
+        model="mistralai/mistral-small-3.1-24b-instruct:free",
+        extra_headers={
+            "HTTP-Referer": "<YOUR_SITE_URL>",  # Optional: For OpenRouter rankings.
+            "X-Title": "<YOUR_SITE_NAME>",  # Optional: For OpenRouter rankings.
+        },
+        extra_body={},
         temperature=1,
         messages=[
             {"role": "system", "content": prompt},
@@ -95,21 +83,20 @@ Timed Captions:{}
     text = response.choices[0].message.content.strip()
     text = re.sub('\s+', ' ', text)
     print("Text", text)
-    log_response(LOG_TYPE_GPT,script,text)
+    log_response(LOG_TYPE_GPT, script, text)
     return text
 
 def merge_empty_intervals(segments):
+    """ Merges consecutive empty time intervals with previous valid segments. """
     merged = []
     i = 0
     while i < len(segments):
         interval, url = segments[i]
         if url is None:
-            # Find consecutive None intervals
             j = i + 1
             while j < len(segments) and segments[j][1] is None:
                 j += 1
             
-            # Merge consecutive None intervals with the previous valid URL
             if i > 0:
                 prev_interval, prev_url = merged[-1]
                 if prev_url is not None and prev_interval[1] == interval[0]:
