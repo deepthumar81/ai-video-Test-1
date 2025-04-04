@@ -6,12 +6,22 @@ from openai import OpenAI
 from utility.utils import log_response, LOG_TYPE_GPT
 
 # Initialize OpenRouter API
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+if not OPENROUTER_API_KEY:
+    raise ValueError("Missing OpenRouter API Key. Set OPENROUTER_API_KEY in environment variables.")
+
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model = "mistralai/mistral-small-3.1-24b-instruct:free"
+    api_key=OPENROUTER_API_KEY,
 )
 
+# Logging Directory
 log_directory = ".logs/gpt_logs"
+
+# OpenRouter Model
+
+
 
 prompt = """# Instructions
 
