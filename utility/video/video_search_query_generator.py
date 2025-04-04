@@ -1,49 +1,29 @@
+from openai import OpenAI
 import os
 import json
 import re
 from datetime import datetime
-from utility.utils import log_response, LOG_TYPE_GPT
+from utility.utils import log_response,LOG_TYPE_GPT
 
-# --- Begin Offline Model Setup ---
-import tempfile
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-
-# Create a temporary cache directory to force a fresh download each run.
-cache_dir = tempfile.mkdtemp()
-model_name = "mistralai/Mistral-7B-Instruct-v0.2"
-
-# Download tokenizer and model directly from the server.
-tokenizer = AutoTokenizer.from_pretrained(
-    model_name,
-    cache_dir=cache_dir,
-    force_download=True
-)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    cache_dir=cache_dir,
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-    force_download=True
-)
-
-# Create the offline text generation pipeline.
-offline_text_generator = pipeline(
-    "text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    device=0 if torch.cuda.is_available() else -1
-)
-# --- End Offline Model Setup ---
-
-# Remove previous API client initialization.
-# if len(os.environ.get("GROQ_API_KEY")) > 30:
-#     from groq import Groq
-#     model = "llama3-70b-8192"
-#     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-# else:
-#     model = "gpt-4o"
-#     OPENAI_API_KEY = os.environ.get('OPENAI_KEY')
-#     client = OpenAI(api_key=OPENAI_API_KEY)
+if os.environ.get("GROQ_API_KEY") and len(os.environ.get("GROQ_API_KEY")) > 30:
+    from groq import Groq
+    model = "mixtral-8x7b-32768"
+    client = Groq(
+        api_key=os.environ.get("GROQ_API_KEY"),
+    )
+else:
+    from openai import OpenAI
+    OPENAI_API_KEY = os.getenv('OPENAI_KEY')
+    
+    if OPENAI_API_KEY:  # If an OpenAI key is provided, use it
+        model = "gpt-4o"
+        client = OpenAI(api_key=OPENAI_API_KEY)
+    else:  # Otherwise, fall back to OpenRouter
+        model = "gpt-4o"  # You can change this if needed
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY")
+        )
 
 log_directory = ".logs/gpt_logs"
 
@@ -66,7 +46,7 @@ The list must always contain the most relevant and appropriate query searches.
 ['Un chien', 'une voiture rapide', 'une maison rouge'] <= BAD, because the text query is NOT in English.
 
 Note: Your response should be the response only and no extra text or data.
-"""
+  """
 
 def fix_json(json_str):
     # Replace typographical apostrophes with straight quotes
@@ -77,12 +57,13 @@ def fix_json(json_str):
     json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
     return json_str
 
-def getVideoSearchQueriesTimed(script, captions_timed):
+def getVideoSearchQueriesTimed(script,captions_timed):
     end = captions_timed[-1][0][1]
     try:
-        out = [[[0, 0], ""]]
+        
+        out = [[[0,0],""]]
         while out[-1][0][1] != end:
-            content = call_offline_model(script, captions_timed).replace("'", '"')
+            content = call_OpenAI(script,captions_timed).replace("'",'"')
             try:
                 out = json.loads(content)
             except Exception as e:
@@ -92,24 +73,29 @@ def getVideoSearchQueriesTimed(script, captions_timed):
                 out = json.loads(content)
         return out
     except Exception as e:
-        print("error in response", e)
+        print("error in response",e)
+   
     return None
 
-def call_offline_model(script, captions_timed):
+def call_OpenAI(script,captions_timed):
     user_content = """Script: {}
-Timed Captions: {}
-""".format(script, "".join(map(str, captions_timed)))
+Timed Captions:{}
+""".format(script,"".join(map(str,captions_timed)))
     print("Content", user_content)
     
-    # Build a full prompt by concatenating the system instructions with the user content.
-    full_prompt = prompt + "\n" + user_content
-
-    # Use the offline model to generate text.
-    result = offline_text_generator(full_prompt, max_length=1000, temperature=1, num_return_sequences=1)
-    text = result[0]['generated_text'].strip()
+    response = client.chat.completions.create(
+        model= model,
+        temperature=1,
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_content}
+        ]
+    )
+    
+    text = response.choices[0].message.content.strip()
     text = re.sub('\s+', ' ', text)
     print("Text", text)
-    log_response(LOG_TYPE_GPT, script, text)
+    log_response(LOG_TYPE_GPT,script,text)
     return text
 
 def merge_empty_intervals(segments):
@@ -132,8 +118,10 @@ def merge_empty_intervals(segments):
                     merged.append([interval, prev_url])
             else:
                 merged.append([interval, None])
+            
             i = j
         else:
             merged.append([interval, url])
             i += 1
+    
     return merged
