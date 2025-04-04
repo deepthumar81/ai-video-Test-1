@@ -1,26 +1,12 @@
 import os
-from openai import OpenAI
 import json
+from openai import OpenAI
 
-if os.environ.get("GROQ_API_KEY") and len(os.environ.get("GROQ_API_KEY")) > 30:
-    from groq import Groq
-    model = "mixtral-8x7b-32768"
-    client = Groq(
-        api_key=os.environ.get("GROQ_API_KEY"),
-    )
-else:
-    from openai import OpenAI
-    OPENAI_API_KEY = os.getenv('OPENAI_KEY')
-    
-    if OPENAI_API_KEY:  # If an OpenAI key is provided, use it
-        model = "gpt-4o"
-        client = OpenAI(api_key=OPENAI_API_KEY)
-    else:  # Otherwise, fall back to OpenRouter
-        model = "gpt-4o"  # You can change this if needed
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY")
-        )
+# Initialize OpenRouter API
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+)
 
 def generate_script(topic):
     prompt = (
@@ -52,19 +38,30 @@ def generate_script(topic):
     )
 
     response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": topic}
-            ]
-        )
+        model="mistralai/mistral-small-3.1-24b-instruct:free",
+        extra_headers={
+            "HTTP-Referer": "<YOUR_SITE_URL>",  # Optional. Site URL for rankings on openrouter.ai.
+            "X-Title": "<YOUR_SITE_NAME>",  # Optional. Site title for rankings on openrouter.ai.
+        },
+        extra_body={},
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": topic}
+        ]
+    )
+
     content = response.choices[0].message.content
     try:
         script = json.loads(content)["script"]
-    except Exception as e:
+    except Exception:
         json_start_index = content.find('{')
         json_end_index = content.rfind('}')
-        print(content)
         content = content[json_start_index:json_end_index+1]
         script = json.loads(content)["script"]
+    
     return script
+
+# Example Usage
+topic = "Amazing space facts"
+script = generate_script(topic)
+print(script)
