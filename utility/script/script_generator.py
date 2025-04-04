@@ -1,24 +1,24 @@
 import os
-import json
 from openai import OpenAI
+import json
 
-# Initialize OpenRouter API
-# client = OpenAI(
-#     base_url="https://openrouter.ai/api/v1",
-#     api_key=os.getenv("OPENROUTER_API_KEY"),
-# )
+# if len(os.environ.get("GROQ_API_KEY")) > 30:
+#     from groq import Groq
+#     model = "mixtral-8x7b-32768"
+#     client = Groq(
+#         api_key=os.environ.get("GROQ_API_KEY"),
+#         )
+# else:
+#     OPENAI_API_KEY = os.getenv('OPENAI_KEY')
+#     model = "gpt-4o"
+#     client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Initialize OpenRouter API
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
-if not OPENROUTER_API_KEY:
-    raise ValueError("Missing OpenRouter API Key. Set OPENROUTER_API_KEY in environment variables.")
-
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    model = "mistralai/mistral-small-3.1-24b-instruct:free"
     api_key=OPENROUTER_API_KEY,
+    api_base="https://api.openrouter.ai/v1"
 )
-
+model = "mistralai/mistral-small-3.1-24b-instruct:free"  # Example model from OpenRouter
 
 def generate_script(topic):
     prompt = (
@@ -50,30 +50,19 @@ def generate_script(topic):
     )
 
     response = client.chat.completions.create(
-        model="mistralai/mistral-small-3.1-24b-instruct:free",
-        extra_headers={
-            "HTTP-Referer": "<YOUR_SITE_URL>",  # Optional. Site URL for rankings on openrouter.ai.
-            "X-Title": "<YOUR_SITE_NAME>",  # Optional. Site title for rankings on openrouter.ai.
-        },
-        extra_body={},
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": topic}
-        ]
-    )
-
+            model=model,
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": topic}
+            ]
+        )
     content = response.choices[0].message.content
     try:
         script = json.loads(content)["script"]
-    except Exception:
+    except Exception as e:
         json_start_index = content.find('{')
         json_end_index = content.rfind('}')
+        print(content)
         content = content[json_start_index:json_end_index+1]
         script = json.loads(content)["script"]
-    
     return script
-
-# Example Usage
-topic = "Amazing space facts"
-script = generate_script(topic)
-print(script)
