@@ -4,7 +4,7 @@ from utility.utils import log_response,LOG_TYPE_PEXEL
 
 PEXELS_API_KEY = os.environ.get('PEXELS_KEY')
 
-def search_videos(query_string, orientation_landscape=True):
+def search_videos(query_string, orientation_landscape=False):
    
     url = "https://api.pexels.com/videos/search"
     headers = {
