@@ -18,26 +18,87 @@ else:
 
 log_directory = ".logs/gpt_logs"
 
-prompt = """# Instructions
+# prompt = """# Instructions
 
-Given the following video script and timed captions, extract three visually concrete and specific keywords for each time segment that can be used to search for background videos. The keywords should be short and capture the main essence of the sentence. They can be synonyms or related terms. If a caption is vague or general, consider the next timed caption for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a time frame contains two or more important pieces of information, divide it into shorter time frames with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the video. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...]. Please handle all edge cases, such as overlapping time segments, vague or general captions, and single-word keywords.
+# Given the following video script and timed captions, extract three visually concrete and specific keywords for each time segment that can be used to search for background videos. The keywords should be short and capture the main essence of the sentence. They can be synonyms or related terms. If a caption is vague or general, consider the next timed caption for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a time frame contains two or more important pieces of information, divide it into shorter time frames with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the video. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...]. Please handle all edge cases, such as overlapping time segments, vague or general captions, and single-word keywords.
 
-For example, if the caption is 'The cheetah is the fastest land animal, capable of running at speeds up to 75 mph', the keywords should include 'cheetah running', 'fastest animal', and '75 mph'. Similarly, for 'The Great Wall of China is one of the most iconic landmarks in the world', the keywords should be 'Great Wall of China', 'iconic landmark', and 'China landmark'.
+# For example, if the caption is 'The cheetah is the fastest land animal, capable of running at speeds up to 75 mph', the keywords should include 'cheetah running', 'fastest animal', and '75 mph'. Similarly, for 'The Great Wall of China is one of the most iconic landmarks in the world', the keywords should be 'Great Wall of China', 'iconic landmark', and 'China landmark'.
 
-Important Guidelines:
+# Important Guidelines:
 
-Use only English in your text queries.
-Each search string must depict something visual.
-The depictions have to be extremely visually concrete, like rainy street, or cat sleeping.
-'emotional moment' <= BAD, because it doesn't depict something visually.
-'crying child' <= GOOD, because it depicts something visual.
-The list must always contain the most relevant and appropriate query searches.
-['Car', 'Car driving', 'Car racing', 'Car parked'] <= BAD, because it's 4 strings.
-['Fast car'] <= GOOD, because it's 1 string.
-['Un chien', 'une voiture rapide', 'une maison rouge'] <= BAD, because the text query is NOT in English.
+# Use only English in your text queries.
+# Each search string must depict something visual.
+# The depictions have to be extremely visually concrete, like rainy street, or cat sleeping.
+# 'emotional moment' <= BAD, because it doesn't depict something visually.
+# 'crying child' <= GOOD, because it depicts something visual.
+# The list must always contain the most relevant and appropriate query searches.
+# ['Car', 'Car driving', 'Car racing', 'Car parked'] <= BAD, because it's 4 strings.
+# ['Fast car'] <= GOOD, because it's 1 string.
+# ['Un chien', 'une voiture rapide', 'une maison rouge'] <= BAD, because the text query is NOT in English.
+
+# Note: Your response should be the response only and no extra text or data.
+#   """
+
+"""
+# Instructions
+
+Given a video script and its corresponding timed captions, your task is to extract visually concrete and specific keywords that can be used to find relevant background videos. Aim for 1-3 keywords per time segment, prioritizing the most visually descriptive elements.
+
+Here's how to approach it:
+
+ Visual Concreteness is Key: Each keyword or keyword phrase must represent something that can be clearly visualized. Think of what you would type into an image or video search engine.
+     Good Examples: rainy street, cat sleeping, cheetah running, Great Wall of China, red apple, blue ocean waves.
+     Bad Examples: emotional moment, important information, interesting fact, concept, feeling.
+ Specificity: Be as specific as possible within a concise phrase. Instead of animal, use cheetah. Instead of building, use Great Wall of China.
+ Conciseness: Keep keywords short and to the point (ideally 1-3 words).
+ Relevance: Keywords should accurately reflect the visual content described in the caption.
+ Time Segmentation:
+     Process the captions sequentially.
+     Each keyword should ideally represent the visual content for approximately 2-4 seconds of the video. Adjust this based on the density of visual information. Shorter segments might only need one strong keyword. Longer segments with multiple visual elements should be broken down into shorter time frames, each with its own keyword(s).
+     Ensure the time periods in your output are strictly consecutive and cover the entire video duration. Represent time in seconds.
+ Handling Vague Captions: If a caption is too general or abstract to yield concrete visuals, use the context from the immediately preceding or succeeding captions to infer potential visual elements.
+ Single Word Keywords: If a single word strongly represents a visual (e.g., cheetah), use it. You don't always need two words. However, if a single word is too broad, try to add a visually specific modifier (e.g., car becomes red car).
+ Multiple Visuals in One Segment: If a time segment contains two or more distinct and important visual elements, either create multiple keywords for that segment or, if the segment is long enough (more than 4 seconds), consider splitting it into shorter time frames, each focusing on one visual.
+ Language: Use only English keywords.
+ Output Format: Return the keywords in JSON format as a list of lists. Each inner list contains:
+     A list of two numbers representing the start and end time (in seconds) of the segment.
+     A list of 1 to 3 keyword strings for that time segment.
+
+Example:
+
+Input:
+
+[
+  [0, 5, "The cheetah is the fastest land animal, capable of running at speeds up to 75 mph."],
+  [5, 10, "The Great Wall of China is one of the most iconic landmarks in the world."]
+]
+
+Output:
+
+[
+  [[0, 2], ["cheetah running"]],
+  [[2, 4], ["fastest animal"]],
+  [[4, 5], ["75 mph speed"]],
+  [[5, 8], ["Great Wall of China"]],
+  [[8, 10], ["iconic landmark"]]
+]
+
+Important Guidelines (Reinforced):
+
+ Use only English in your text queries.
+ Each search string must depict something visual.
+ The depictions have to be extremely visually concrete, like rainy street, or cat sleeping.
+ 'emotional moment' <= BAD
+ 'crying child' <= GOOD
+ The list must always contain the most relevant and appropriate query searches.
+ ['Car'] <= GOOD
+ ['Car driving'] <= GOOD
+ ['Car racing'] <= GOOD
+ ['Car parked'] <= GOOD (Each is a distinct visual)
+ ['Un chien', 'une voiture rapide', 'une maison rouge'] <= BAD (Not English)
 
 Note: Your response should be the response only and no extra text or data.
-  """
+"""
 
 def fix_json(json_str):
     # Replace typographical apostrophes with straight quotes
