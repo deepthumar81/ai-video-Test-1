@@ -42,7 +42,7 @@ log_directory = ".logs/gpt_logs"
 prompt = """ # Instructions
 
 
-Given a video script and its corresponding timed captions, your task is to extract visually concrete and specific keywords that can be used to find relevant background videos. Aim for 1-3 keywords per time segment, prioritizing the most visually descriptive elements.
+Given the following video script and timed captions, extract three visually concrete and specific keywords for each time segment that can be used to search for background videos. The keywords should be short and capture the main essence of the sentence. They can be synonyms or related terms. If a caption is vague or general, consider the next timed caption for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a time frame contains two or more important pieces of information, divide it into shorter time frames with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the video. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...]. Please handle all edge cases, such as overlapping time segments, vague or general captions, and single-word keywords.
 
 Here's how to approach it:
 
@@ -64,26 +64,7 @@ Here's how to approach it:
      A list of two numbers representing the start and end time (in seconds) of the segment.
      A list of 1 to 3 keyword strings for that time segment.
 
-Example:
-
-Input:
-
-[
-  [0, 5, "The cheetah is the fastest land animal, capable of running at speeds up to 75 mph."],
-  [5, 10, "The Great Wall of China is one of the most iconic landmarks in the world."]
-]
-
-Output:
-
-[
-  [[0, 2], ["cheetah running"]],
-  [[2, 4], ["fastest animal"]],
-  [[4, 5], ["75 mph speed"]],
-  [[5, 8], ["Great Wall of China"]],
-  [[8, 10], ["iconic landmark"]]
-]
-
-Important Guidelines (Reinforced):
+Important Guidelines:
 
  Use only English in your text queries.
  Each search string must depict something visual.
