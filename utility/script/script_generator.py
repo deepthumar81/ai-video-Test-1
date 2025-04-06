@@ -1,27 +1,17 @@
 import os
-# from openai import OpenAI
-import openai
+from openai import OpenAI
 import json
 
-# if len(os.environ.get("GROQ_API_KEY")) > 30:
-#     from groq import Groq
-#     model = "mixtral-8x7b-32768"
-#     client = Groq(
-#         api_key=os.environ.get("GROQ_API_KEY"),
-#         )
-# else:
-#     OPENAI_API_KEY = os.getenv('OPENAI_KEY')
-#     model = "gpt-4o"
-#     client = OpenAI(api_key=OPENAI_API_KEY)
-
-# OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-# client = OpenAI(
-#     api_key=OPENROUTER_API_KEY,
-#     api_base="https://api.openrouter.ai/v1"
-# )
-openai.api_key = os.getenv('OPENROUTER_API_KEY')
-openai.api_base = "https://api.openrouter.ai/v1"
-model = "mistralai/mistral-small-3.1-24b-instruct:free"  # Example model from OpenRouter
+if len(os.environ.get("GROQ_API_KEY")) > 30:
+    from groq import Groq
+    model = "mixtral-8x7b-32768"
+    client = Groq(
+        api_key=os.environ.get("GROQ_API_KEY"),
+        )
+else:
+    OPENAI_API_KEY = os.getenv('OPENAI_KEY')
+    model = "gpt-4o"
+    client = OpenAI(api_key=OPENAI_API_KEY)
 
 def generate_script(topic):
     prompt = (
