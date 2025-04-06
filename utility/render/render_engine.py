@@ -57,24 +57,24 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
 
     
 
-    def styled_caption(text, duration, screen_size=(1280, 720)):
-        caption = (
-            TextClip(
-                txt=text,
-                fontsize=70,
-                font="Arial-Bold",
-                color="white",
-                stroke_color="black",
-                stroke_width=6,
-                method="caption",
-                align="center",
-                size=(screen_size[0] - 100, None)  # padding from left/right
-            )
-            .set_position(("center", "bottom"))
-            .margin(bottom=60, opacity=0)  # add margin at bottom
-            .set_duration(duration)
-        )
-        return caption
+  def styled_caption(text, duration, screen_size=(1280, 720)):
+      caption = (
+          TextClip(
+              txt=text,
+              fontsize=70,
+              font="Arial-Bold",
+              color="white",
+              stroke_color="black",
+              stroke_width=6,
+              method="caption",
+              align="center",
+              size=(screen_size[0] - 100, None)  # padding from left/right
+          )
+          .set_position(("center", "bottom"))
+          .margin(bottom=60, opacity=0)  # add margin at bottom
+          .set_duration(duration)
+      )
+      return caption
 
 
     for (t1, t2), text in timed_captions:
