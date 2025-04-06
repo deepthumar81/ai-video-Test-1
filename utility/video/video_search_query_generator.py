@@ -1,21 +1,20 @@
-# from openai import OpenAI
+from openai import OpenAI
 import os
 import json
 import re
 from datetime import datetime
 from utility.utils import log_response,LOG_TYPE_GPT
 
-# OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-# client = OpenAI(
-#     api_key=OPENROUTER_API_KEY,
-#     api_base="https://api.openrouter.ai/v1"
-# )
-
-import openai
-openai.api_key = os.getenv('OPENROUTER_API_KEY')
-openai.api_base = "https://api.openrouter.ai/v1"
-model = "mistralai/mistral-small-3.1-24b-instruct:free"  # Example model from OpenRouter
-
+if len(os.environ.get("GROQ_API_KEY")) > 30:
+    from groq import Groq
+    model = "llama3-70b-8192"
+    client = Groq(
+        api_key=os.environ.get("GROQ_API_KEY"),
+        )
+else:
+    model = "gpt-4o"
+    OPENAI_API_KEY = os.environ.get('OPENAI_KEY')
+    client = OpenAI(api_key=OPENAI_API_KEY)
 
 log_directory = ".logs/gpt_logs"
 
