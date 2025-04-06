@@ -55,30 +55,27 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
     audio_clips.append(audio_file_clip)
 
     for (t1, t2), text in timed_captions:
-        # text_clip = TextClip(txt=text, fontsize=100, color="white", stroke_width=3, stroke_color="black", method="label")
-        # text_clip = TextClip(txt=text, fontsize=100, color="white", stroke_width=3, stroke_color="black", method="label")
-        text_clip = (
-            TextClip(
-                txt=text,
-                fontsize=70,
-                font="Arial-Bold",
-                color="white",
-                stroke_color="black",
-                stroke_width=5,
-                size=(1280, None),
-                method="caption",
-                align="center",
-            )
-            .set_position(("center", "bottom"))
-            .margin(bottom=80)
-            .fadein(0.3)
-            .fadeout(0.3)
+    text_clip = (
+        TextClip(
+            txt=text,
+            fontsize=70,
+            font="Arial-Bold",
+            color="white",
+            stroke_color="black",
+            stroke_width=5,
+            size=(1280, None),
+            method="caption",
+            align="center",
         )
+        .set_position(("center", "bottom"))
+        .margin(bottom=80)
+        .set_start(t1)
+        .set_end(t2)
+        .fadein(0.3)
+        .fadeout(0.3)
+    )
+    visual_clips.append(text_clip)
 
-        text_clip = text_clip.set_start(t1)
-        text_clip = text_clip.set_end(t2)
-        # text_clip = text_clip.set_position(["center", 800])
-        visual_clips.append(text_clip)
 
     video = CompositeVideoClip(visual_clips)
     
