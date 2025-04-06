@@ -18,7 +18,8 @@ else:
 
 log_directory = ".logs/gpt_logs"
 
-# prompt = """# Instructions
+
+# """# Instructions
 
 # Given the following video script and timed captions, extract three visually concrete and specific keywords for each time segment that can be used to search for background videos. The keywords should be short and capture the main essence of the sentence. They can be synonyms or related terms. If a caption is vague or general, consider the next timed caption for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a time frame contains two or more important pieces of information, divide it into shorter time frames with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the video. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...]. Please handle all edge cases, such as overlapping time segments, vague or general captions, and single-word keywords.
 
@@ -38,7 +39,7 @@ log_directory = ".logs/gpt_logs"
 
 # Note: Your response should be the response only and no extra text or data.
 #   """
-
+prompt = 
 """
 # Instructions
 
