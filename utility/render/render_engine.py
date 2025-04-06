@@ -77,10 +77,10 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
       return caption
 
 
-    for (t1, t2), text in timed_captions:
-    text_clip = styled_caption(text, duration=(t2 - t1))
-    text_clip = text_clip.set_start(t1)
-    visual_clips.append(text_clip)
+      for (t1, t2), text in timed_captions:
+      text_clip = styled_caption(text, duration=(t2 - t1))
+      text_clip = text_clip.set_start(t1)
+      visual_clips.append(text_clip)
 
 
 
