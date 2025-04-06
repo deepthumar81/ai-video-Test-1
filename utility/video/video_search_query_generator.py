@@ -82,33 +82,43 @@ Note: Your response should be the response only and no extra text or data.
 """
 
 def fix_json(json_str):
-    # Replace typographical apostrophes with straight quotes
-    json_str = json_str.replace("’", "'")
-    # Replace any incorrect quotes (e.g., mixed single and double quotes)
-    json_str = json_str.replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
-    # Add escaping for quotes within the strings
-    json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
-    return json_str
+    # Remove all control characters except whitespace
+    json_str = re.sub(r'[\x00-\x1F\x7F]', '', json_str)
+    # Normalize quotes
+    json_str = json_str.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
+    # Try to handle unescaped double quotes inside strings
+    json_str = re.sub(r'(?<!\\)"(.*?)"(?![:,}\]])', lambda m: '"' + m.group(1).replace('"', '\\"') + '"', json_str)
+    return json_str.strip()
 
-def getVideoSearchQueriesTimed(script,captions_timed):
+
+def getVideoSearchQueriesTimed(script, captions_timed):
     end = captions_timed[-1][0][1]
     try:
-        
-        out = [[[0,0],""]]
+        out = [[[0, 0], ""]]
         while out[-1][0][1] != end:
-            content = call_OpenAI(script,captions_timed).replace("'",'"')
+            content = call_OpenAI(script, captions_timed)
+
+            # Clean known markdown formatting & extra spaces
+            content = content.replace("```json", "").replace("```", "").strip()
+
             try:
                 out = json.loads(content)
-            except Exception as e:
-                print("content: \n", content, "\n\n")
-                print(e)
-                content = fix_json(content.replace("```json", "").replace("```", ""))
-                out = json.loads(content)
+            except json.JSONDecodeError as e:
+                print("RAW content (before fix):\n", content, "\n")
+                print("Decode error:", e)
+
+                # Try fallback fix
+                content_fixed = fix_json(content)
+                try:
+                    out = json.loads(content_fixed)
+                except json.JSONDecodeError as e2:
+                    print("Fixed content failed too:\n", content_fixed)
+                    raise e2  # Still invalid, re-raise
         return out
     except Exception as e:
-        print("error in response",e)
-   
-    return None
+        print("Error in final output:", e)
+        return None
+
 
 def call_OpenAI(script,captions_timed):
     user_content = """Script: {}
