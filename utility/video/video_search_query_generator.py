@@ -39,9 +39,8 @@ log_directory = ".logs/gpt_logs"
 
 # Note: Your response should be the response only and no extra text or data.
 #   """
-prompt = 
-"""
-# Instructions
+prompt = """ # Instructions
+
 
 Given a video script and its corresponding timed captions, your task is to extract visually concrete and specific keywords that can be used to find relevant background videos. Aim for 1-3 keywords per time segment, prioritizing the most visually descriptive elements.
 
