@@ -42,7 +42,8 @@ log_directory = ".logs/gpt_logs"
 prompt = """ # Instructions
 
 
-Given the following video script and timed captions, extract three visually concrete and specific keywords for each time segment that can be used to search for background videos. The keywords should be short and capture the main essence of the sentence. They can be synonyms or related terms. If a caption is vague or general, consider the next timed caption for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a time frame contains two or more important pieces of information, divide it into shorter time frames with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the video. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...]. Please handle all edge cases, such as overlapping time segments, vague or general captions, and single-word keywords.
+Given the following video script and timed captions, extract three visually concrete and specific keywords for each time segment that can be used to search for background videos. The keywords should be short and capture the main essence of the sentence. They can be synonyms or related terms. If a caption is vague or general, consider the next timed caption for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a time frame contains two or more important pieces of information, divide it into shorter time frames with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the video. Each keyword should cover between 4–8 seconds. Prefer longer durations if visuals remain consistent.
+The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...]. Please handle all edge cases, such as overlapping time segments, vague or general captions, and single-word keywords.
 
 Here's how to approach it:
 
@@ -58,11 +59,11 @@ Here's how to approach it:
      Ensure the time periods in your output are strictly consecutive and cover the entire video duration. Represent time in seconds.
  Handling Vague Captions: If a caption is too general or abstract to yield concrete visuals, use the context from the immediately preceding or succeeding captions to infer potential visual elements.
  Single Word Keywords: If a single word strongly represents a visual (e.g., cheetah), use it. You don't always need two words. However, if a single word is too broad, try to add a visually specific modifier (e.g., car becomes red car).
- Multiple Visuals in One Segment: If a time segment contains two or more distinct and important visual elements, either create multiple keywords for that segment or, if the segment is long enough (more than 4 seconds), consider splitting it into shorter time frames, each focusing on one visual.
+ Multiple Visuals in One Segment: If a time segment contains two or more distinct and important visual elements, either create multiple keywords for that segment or, if the segment is long enough (more than 8 seconds), consider splitting it into shorter time frames, each focusing on one visual.
  Language: Use only English keywords.
  Output Format: Return the keywords in JSON format as a list of lists. Each inner list contains:
      A list of two numbers representing the start and end time (in seconds) of the segment.
-     A list of 1 to 3 keyword strings for that time segment.
+     A list of 1 to 2 keyword strings per segment to reduce visual clutter.
 
 Important Guidelines:
 
@@ -141,30 +142,42 @@ Timed Captions:{}
     log_response(LOG_TYPE_GPT,script,text)
     return text
 
-def merge_empty_intervals(segments):
+# def merge_empty_intervals(segments):
+#     merged = []
+#     i = 0
+#     while i < len(segments):
+#         interval, url = segments[i]
+#         if url is None:
+#             # Find consecutive None intervals
+#             j = i + 1
+#             while j < len(segments) and segments[j][1] is None:
+#                 j += 1
+            
+#             # Merge consecutive None intervals with the previous valid URL
+#             if i > 0:
+#                 prev_interval, prev_url = merged[-1]
+#                 if prev_url is not None and prev_interval[1] == interval[0]:
+#                     merged[-1] = [[prev_interval[0], segments[j-1][0][1]], prev_url]
+#                 else:
+#                     merged.append([interval, prev_url])
+#             else:
+#                 merged.append([interval, None])
+            
+#             i = j
+#         else:
+#             merged.append([interval, url])
+#             i += 1
+    def merge_similar_segments(segments):
     merged = []
-    i = 0
-    while i < len(segments):
-        interval, url = segments[i]
-        if url is None:
-            # Find consecutive None intervals
-            j = i + 1
-            while j < len(segments) and segments[j][1] is None:
-                j += 1
-            
-            # Merge consecutive None intervals with the previous valid URL
-            if i > 0:
-                prev_interval, prev_url = merged[-1]
-                if prev_url is not None and prev_interval[1] == interval[0]:
-                    merged[-1] = [[prev_interval[0], segments[j-1][0][1]], prev_url]
-                else:
-                    merged.append([interval, prev_url])
-            else:
-                merged.append([interval, None])
-            
-            i = j
+    for seg in segments:
+        if not merged:
+            merged.append(seg)
         else:
-            merged.append([interval, url])
-            i += 1
+            last = merged[-1]
+            if set(seg[1]) == set(last[1]):  # or use a similarity metric
+                last[0][1] = seg[0][1]  # Extend end time
+            else:
+                merged.append(seg)
+    return merged
     
     return merged
